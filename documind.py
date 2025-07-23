@@ -2,12 +2,15 @@ from dotenv import load_dotenv
 import streamlit as st
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
-from langchain.llms import OpenAI
-from langchain.callbacks import get_openai_callback
+from langchain_huggingface import HuggingFacePipeline
+from transformers import pipeline
+import os
 
+# Arabic-compatible embedding model
+EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
 def main():
     load_dotenv()
@@ -22,7 +25,7 @@ def main():
       pdf_reader = PdfReader(pdf)
       text = ""
       for page in pdf_reader.pages:
-        text += page.extract_text()
+        text += page.extract_text() or ""  # Handle cases where extract_text() returns None
         
       # split into chunks
       text_splitter = CharacterTextSplitter(
@@ -34,7 +37,7 @@ def main():
       chunks = text_splitter.split_text(text)
       
       # create embeddings
-      embeddings = OpenAIEmbeddings()
+      embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
       knowledge_base = FAISS.from_texts(chunks, embeddings)
       
       # show user input
@@ -42,14 +45,15 @@ def main():
       if user_question:
         docs = knowledge_base.similarity_search(user_question)
         
-        llm = OpenAI()
+        llm = HuggingFacePipeline.from_model_id(
+            model_id="distilgpt2",  # Lightweight open-source model
+            task="text-generation",
+            pipeline_kwargs={"max_new_tokens": 100, "truncation": True}
+        )
         chain = load_qa_chain(llm, chain_type="stuff")
-        with get_openai_callback() as cb:
-          response = chain.run(input_documents=docs, question=user_question)
-          print(cb)
-           
+        response = chain.run(input_documents=docs, question=user_question)
+        
         st.write(response)
-    
 
 if __name__ == '__main__':
     main()

@@ -1,68 +1,76 @@
+# app.py
 import streamlit as st
 from helper import load_pdf_and_create_qa
 from tempfile import NamedTemporaryFile
+import time
+from datetime import datetime
+import pandas as pd
 
-# Page setup
 st.set_page_config(page_title="DocuMind - PDF Assistant", layout="wide")
+st.title("DocuMind - PDF Q&A and Analysis")
 
-# Custom CSS for professional styling
-st.markdown("""
-    <style>
-    body {
-        background-color: #f8f9fa;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    .main-title {
-        font-size: 36px;
-        font-weight: 600;
-        color: #1a237e;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    .subtitle {
-        font-size: 18px;
-        color: #555;
-        text-align: center;
-        margin-bottom: 40px;
-    }
-    .stTextInput > div > div > input {
-        border: 1px solid #ced4da;
-        border-radius: 6px;
-        padding: 10px;
-    }
-    .stTextInput > label {
-        font-weight: 500;
-        color: #343a40;
-    }
-    .stMarkdown h3 {
-        color: #0d47a1;
-        margin-top: 30px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# ---- Session State ----
+if "history" not in st.session_state:
+    st.session_state.history = []
+if "pdf_info" not in st.session_state:
+    st.session_state.pdf_info = {}
+if "qa" not in st.session_state:
+    st.session_state.qa = None
 
-# Header
-st.markdown('<div class="main-title">DocuMind</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Upload any PDF and ask questions based on its content</div>', unsafe_allow_html=True)
+tab1, tab2 = st.tabs(["Chat with PDF", "Analysis"])
 
-# PDF Upload
-uploaded_file = st.file_uploader("Upload your PDF file", type="pdf")
+with tab1:
+    uploaded_file = st.file_uploader("Upload your PDF file", type="pdf")
 
-if uploaded_file is not None:
-    with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        tmp_path = tmp_file.name
+    if uploaded_file is not None:
+        # re-build only if new file
+        if st.session_state.qa is None or st.session_state.pdf_info.get("file_name") != uploaded_file.name:
+            with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(uploaded_file.read())
+                tmp_path = tmp.name
 
-    st.success("PDF uploaded successfully. You may now ask your questions.")
+            st.session_state.pdf_info["file_name"] = uploaded_file.name
+            st.success(f"PDF `{uploaded_file.name}` uploaded successfully.")
 
-    with st.spinner("Processing the document... Please wait."):
-        qa = load_pdf_and_create_qa(tmp_path)
+            with st.spinner("Processing the document..."):
+                st.session_state.qa = load_pdf_and_create_qa(tmp_path)
 
-    question = st.text_input("Enter your question:")
+        question = st.text_input("Enter your question:")
+        if question:
+            start = time.time()
+            with st.spinner("Generating answer..."):
+                answer = st.session_state.qa.run(question)
+            rt = round(time.time() - start, 2)
 
-    if question:
-        with st.spinner("Generating answer..."):
-            answer = qa.run(question)
+            st.markdown("### Answer:")
+            st.write(answer)
 
-        st.markdown("### Answer:")
-        st.write(answer)
+            st.session_state.history.append({
+                "q": question,
+                "a": answer,
+                "rt": rt,
+                "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+with tab2:
+    st.header("PDF Analysis & Usage Statistics")
+
+    if st.session_state.pdf_info.get("file_name"):
+        st.write(f"**File Name:** {st.session_state.pdf_info['file_name']}")
+        st.write(f"**Questions Asked:** {len(st.session_state.history)}")
+
+        if st.session_state.history:
+            st.subheader("Q&A History")
+            for i, item in enumerate(st.session_state.history, 1):
+                st.markdown(f"**{i}. Question:** {item['q']}")
+                st.markdown(f"**Answer:** {item['a']}")
+                st.markdown(f"*Time:* {item['ts']} • *Response time:* {item['rt']} sec")
+                st.markdown("---")
+
+            st.subheader("Table View")
+            df = pd.DataFrame(st.session_state.history)
+            st.dataframe(df)
+        else:
+            st.info("No questions asked yet.")
+    else:
+        st.info("Please upload a PDF and ask questions to see statistics here.")

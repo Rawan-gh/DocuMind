@@ -1,9 +1,0 @@
-streamlit
-langchain-community
-faiss-cpu
-PyMuPDF
-sentence-transformers
-pypdf
-langchain-huggingface
-transformers
-torch

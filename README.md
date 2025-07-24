@@ -1,4 +1,4 @@
-# DocuMind – Chat with your PDF (No OpenAI)
+# DocuMind – Chat with your PDF 
 
 DocuMind is a Streamlit app that lets you upload any PDF and ask questions about it.  
 It uses **Hugging Face models** (no OpenAI, no API keys required):

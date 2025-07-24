@@ -1,31 +1,22 @@
-Ask Your PDF
-A simple Streamlit-based app that lets you upload a PDF and ask questions about its content in any language, including Arabic and English.
-🌟 Features
+# DocuMind – Chat with your PDF (No OpenAI)
 
-Upload a PDF file
-Ask questions about the PDF content
-Get answers using an open-source AI model (distilgpt2)
-Supports multilingual text with a robust embedding model
+DocuMind is a Streamlit app that lets you upload any PDF and ask questions about it.  
+It uses **Hugging Face models** (no OpenAI, no API keys required):
 
-🛠️ Installation
+- **Embeddings:** `sentence-transformers/all-MiniLM-L6-v2`
+- **LLM:** `google/flan-t5-small`
 
-Clone the repository or download the files.
-Install the required dependencies:pip install -r requirements.txt
+## Features
+- Upload a PDF and query it
+- Retrieval-Augmented Generation (RAG) using FAISS
+- Analysis tab: questions history, response times, etc.
 
+## Setup
 
-Run the app:streamlit run app.py
+```bash
+# (Optional) conda
+conda create -n documind python=3.10 -y
+conda activate documind
 
-
-
-🛠️ Usage
-
-Upload a PDF file using the file uploader.
-Enter a question about the PDF content in the text input.
-View the AI-generated answer based on the PDF.
-
-📝 Notes
-
-Uses distilgpt2 for question answering, a lightweight open-source model.
-Supports multilingual PDFs (e.g., Arabic, English) via a multilingual embedding model.
-No OpenAI API key is required, making it free to use with local computation.
-For better performance, consider using a larger model like gpt2-medium (update model_id in app.py).
+# Install
+pip install -r requirements.txt
